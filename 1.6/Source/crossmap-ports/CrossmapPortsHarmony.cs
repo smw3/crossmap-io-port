@@ -105,7 +105,7 @@ namespace CrossmapPorts
         }
 
         /*
-         * This does NOT work. You PROBABLY need to patch Building_ColdStorage.HandleNewItem because otherwise it just moves items to a different location on the IO port's map, rather than to the map the storage is on.
+         * This works? All that needed to be done is to despawn the item and respawn it on the right map.
          */
         public static class Building_MassStorageUnit_RegisterNewItem_Patch
         {
@@ -147,7 +147,7 @@ namespace CrossmapPorts
                 {
                     getItems(__instance).Add(newItem);
                 }
-                if (newItem.Spawned) { 
+                if (newItem.Spawned && newItem.Map != __instance.Map) { 
                     newItem.DeSpawn(DestroyMode.Vanish);
                 }
                 if (!newItem.Spawned)
