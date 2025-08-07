@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ModMetaData>
+	<name>Rimfactory Crossmap Ports</name>
+	<author>Ingendum</author>
+	<supportedVersions>
+		<li>1.6</li>
+	</supportedVersions>
+	<packageId>Ingendum.RimfactoryCrossmapPorts</packageId>
+	<description>Patches Rimfactory IO Ports to connect to any storage on any map
+	</description>
+	<modDependencies>
+		<li>
+			<packageId>spdskatr.projectrimfactory</packageId>
+			<displayName>Project RimFactory Revived</displayName>
+			<steamWorkshopUrl>steam://url/CommunityFilePage/2033979700</steamWorkshopUrl>
+		</li>
+	</modDependencies>
+	<loadAfter>
+		<li>spdskatr.projectrimfactory</li>
+	</loadAfter>
+</ModMetaData>
