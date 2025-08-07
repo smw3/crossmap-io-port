@@ -50,9 +50,9 @@ namespace CrossmapPorts
 
                 harmony.Patch(target, transpiler: new HarmonyMethod(transpiler));
 
-                patchType = typeof(Building_ColdStorage_RegisterNewItem_Patch);
+                patchType = typeof(Building_MassStorageUnit_RegisterNewItem_Patch);
                 var prefix = patchType.GetMethod("Prefix", BindingFlags.Public | BindingFlags.Static);
-                target = typeof(Building_ColdStorage).GetMethod("HandleNewItem", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                target = typeof(Building_MassStorageUnit).GetMethod("RegisterNewItem", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 
                 harmony.Patch(target, prefix: new HarmonyMethod(prefix));
             }
@@ -107,60 +107,56 @@ namespace CrossmapPorts
         /*
          * This does NOT work. You PROBABLY need to patch Building_ColdStorage.HandleNewItem because otherwise it just moves items to a different location on the IO port's map, rather than to the map the storage is on.
          */
-        public static class Building_ColdStorage_RegisterNewItem_Patch
+        public static class Building_MassStorageUnit_RegisterNewItem_Patch
         {
-            private static Lazy<PropertyInfo> _ItemsProperty = new(() => AccessTools.Property(typeof(Building_ColdStorage), "Items"));
-            private static List<Thing> getItems(Building_ColdStorage instance)
+            private static Lazy<FieldInfo> _ItemsField = new(() => AccessTools.Field(typeof(Building_MassStorageUnit), "items"));
+            private static List<Thing> getItems(Building_MassStorageUnit instance)
             {
-                    return (List<Thing>)_ItemsProperty.Value.GetValue(instance);
+                return (List<Thing>)_ItemsField.Value.GetValue(instance);
             }
 
-            private static Lazy<FieldInfo> _ThingOwner = new (() => AccessTools.Field(typeof(Building_ColdStorage), "thingOwner"));
-
-            public static bool Prefix(Building_ColdStorage __instance, Thing item)
-            {              
-                Log.Message($"CrossmapPorts: RegisterNewItem called for {item} in {__instance}");
-                if (getItems(__instance).Contains(item))
+            public static bool Prefix(Building_MassStorageUnit __instance, Thing newItem)
+            {
+                __instance.ItemCountsAdded(newItem.def, newItem.stackCount);
+                List<Thing> thingList = __instance.Position.GetThingList(__instance.Map);
+                for (int i = 0; i < thingList.Count; i++)
                 {
-                    Log.Message(string.Format("dup: {0}", item));
-                }
-                else
-                {
-                    foreach (Thing thing in getItems(__instance).ToArray())
+                    Thing thing = thingList[i];
+                    bool flag = thing == newItem;
+                    if (!flag)
                     {
-                        bool flag2 = thing.def.category == ThingCategory.Item;
+                        bool flag2 = thing.def.category == ThingCategory.Item && thing.CanStackWith(newItem);
                         if (flag2)
                         {
-                            thing.TryAbsorbStack(item, true);
+                            thing.TryAbsorbStack(newItem, true);
                         }
-                        bool destroyed = item.Destroyed;
+                        bool destroyed = newItem.Destroyed;
                         if (destroyed)
                         {
-                            break;
+                            return false;
                         }
                     }
-                    if (!item.Destroyed)
-                    {
-                        ThingOwner holdingOwner = item.holdingOwner;
-                        if (holdingOwner != null)
-                        {
-                            holdingOwner.Remove(item);
-                        }
-                        ((ThingOwner<Thing>)(_ThingOwner.Value.GetValue(__instance))).TryAdd(item, false);
-                        bool canStoreMoreItems = __instance.CanStoreMoreItems;
-                        // Changes after this comment, but they don't work since the entire function doesn't seem to actually be called.
-                        if (item.Spawned)
-                        {
-                            Log.Message($"Despawning item {item}");
-                            item.DeSpawn(DestroyMode.Vanish);
-                        }                        
-                        if (canStoreMoreItems)
-                        {
-                            var oldMap = item.Map;
-                            item.SpawnSetup(__instance.Map, true);
-                            Log.Message($"Moved item, old map {oldMap} new map {item.Map}");
-                        }
-                    }
+                }
+                bool destroyed2 = newItem.Destroyed;
+                if (destroyed2)
+                {
+                    return false;
+                }
+
+                if (!getItems(__instance).Contains(newItem))
+                {
+                    getItems(__instance).Add(newItem);
+                }
+                if (newItem.Spawned) { 
+                    newItem.DeSpawn(DestroyMode.Vanish);
+                }
+                if (!newItem.Spawned)
+                {
+                    newItem.SpawnSetup(__instance.Map, false);
+                }
+                if (__instance.CanStoreMoreItems)
+                {
+                    newItem.Position = __instance.Position;
                 }
 
                 return false; // Skip original method
